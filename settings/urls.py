@@ -18,5 +18,5 @@ from django.contrib import admin
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^v1/', include('imageController.urls')),
+    url(r'^v1/', include('aws_controller.urls')),
 ]

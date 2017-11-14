@@ -31,7 +31,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'imageController.apps.ImagecontrollerConfig',
+    'aws_controller.apps.AwsControllerConfig',
+    'vision_controller.apps.VisionControllerConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

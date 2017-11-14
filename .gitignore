@@ -102,3 +102,6 @@ ENV/
 
 # intellij
 .idea/
+
+# vscode
+.vscode/
