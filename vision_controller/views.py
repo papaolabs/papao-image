@@ -1,3 +1,89 @@
+import collections
+import os
 from django.shortcuts import render
+from google.cloud import vision
+from google.cloud.vision import types
+import vision_controller.utils
 
-# Create your views here.
+try:
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS']
+except KeyError:
+    print("google credential load fail")
+    raise
+
+client = vision.ImageAnnotatorClient()
+vision_request = {
+    'image': None,
+    'features': [{'type': vision.enums.Feature.Type.LABEL_DETECTION},
+                 {'type': vision.enums.Feature.Type.IMAGE_PROPERTIES},
+                 {'type': vision.enums.Feature.Type.SAFE_SEARCH_DETECTION}]
+}
+
+filter_list = ["dog",
+               "dorgi",
+               "paw",
+               "fur",
+               "snout",
+               "puppy",
+               "kennel",
+               "carnivoran",
+               "companion",
+               "companion dog",
+               "dog crate",
+               "dog breed",
+               "dog like mammal",
+               "dog crossbreeds",
+               "dog breed group",
+               "cat like mammal",
+               "mammal",
+               "vertebrate",
+               "animal shelter"]
+
+ColorResults = collections.namedtuple('ColorResults',['color','score','fraction'])
+LabelResults = collections.namedtuple('LabelResults',['label','score'])
+
+
+def get_vision_result(url):
+    # import pdb;pdb.set_trace()
+    image = vision_controller.utils.download_file(url)
+    vision_request['image'] = types.Image(content=image.read())
+    response = client.annotate_image(vision_request)
+    # import pdb;pdb.set_trace()
+    color_results = get_image_color_results(response)
+    label_results = get_label_annotation_results(response)
+    return response
+
+
+def get_vision_result_by_file(file):
+    vision_request['image'] = types.Image(content=file.read())
+    response = client.annotate_image(vision_request)
+    # import pdb;pdb.set_trace()
+    return response
+
+
+def get_image_color_results(res):
+    colors = res.image_properties_annotation.dominant_colors.colors
+    # protobuf ListValue map 가능 여부 확인 필요
+    # color_list = list(map(lambda x:' '.join([x.color.red,x.color.green,x.color.blue]),colors))
+    # 임시로 for문 사용
+    result = ColorResults(color=list(),score=list(),fraction=list())
+    for item in colors:
+        x = item.color
+        result.color.append(' '.join([str(x.red),str(x.green),str(x.blue)]))
+        result.score.append(str(item.score))
+        result.fraction.append(str(item.score))
+    return result
+
+
+def get_label_annotation_results(res):
+    labels = res.label_annotations
+    result = LabelResults(label=list(),score=list())
+    for item in labels:
+        if filter_labels(item.description):
+            result.label.append(item.description)
+            result.score.append(str(item.score))
+    return result
+
+
+def filter_labels(label):
+    return (label not in filter_list)
