@@ -102,3 +102,12 @@ ENV/
 
 # intellij
 .idea/
+
+# vscode
+.vscode/
+
+# app key
+*.json
+
+# sqllite
+db.sqlite3
