@@ -4,6 +4,7 @@ from django.shortcuts import render
 from google.cloud import vision
 from google.cloud.vision import types
 import vision_controller.utils
+from vision_controller.models import VisionTb
 
 try:
     os.environ['GOOGLE_APPLICATION_CREDENTIALS']
@@ -44,21 +45,22 @@ LabelResults = collections.namedtuple('LabelResults',['label','score'])
 
 
 def get_vision_result(url):
-    # import pdb;pdb.set_trace()
     image = vision_controller.utils.download_file(url)
     vision_request['image'] = types.Image(content=image.read())
     response = client.annotate_image(vision_request)
     # import pdb;pdb.set_trace()
     color_results = get_image_color_results(response)
     label_results = get_label_annotation_results(response)
-    return response
+    return [color_results,label_results]
 
 
 def get_vision_result_by_file(file):
     vision_request['image'] = types.Image(content=file.read())
     response = client.annotate_image(vision_request)
-    # import pdb;pdb.set_trace()
-    return response
+    color_results = get_image_color_results(response)
+    label_results = get_label_annotation_results(response)
+    file.seek(0)
+    return [color_results,label_results]
 
 
 def get_image_color_results(res):
@@ -71,7 +73,7 @@ def get_image_color_results(res):
         x = item.color
         result.color.append(' '.join([str(x.red),str(x.green),str(x.blue)]))
         result.score.append(str(item.score))
-        result.fraction.append(str(item.score))
+        result.fraction.append(str(item.pixel_fraction))
     return result
 
 
@@ -87,3 +89,11 @@ def get_label_annotation_results(res):
 
 def filter_labels(label):
     return (label not in filter_list)
+
+
+def insert_vision_result(color_result, label_result, post_type, url):
+    entity = VisionTb(post_type=post_type,image_url=url,
+                      color_rgb=color_result.color,color_score=color_result.score,
+                      color_fraction=color_result.fraction,label=label_result.label,
+                      label_score=label_result.score)
+    entity.save()

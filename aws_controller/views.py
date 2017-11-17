@@ -4,13 +4,16 @@ from django.views.decorators.csrf import csrf_exempt
 import boto3
 import tempfile
 import mimetypes
+import uuid
 from vision_controller import views as vision_views
+
+
 
 bucket_name = 'papao-s3-bucket'
 s3 = boto3.resource('s3')
 bucket = s3.Bucket(bucket_name)
+#hostname = "220.230.121.76:8000"
 hostname = "localhost:8000"
-
 
 def get_image(request, filename):
     f = tempfile.TemporaryFile()
@@ -21,10 +24,16 @@ def get_image(request, filename):
 
 @csrf_exempt
 def post_image(request):
-    files = request.FILES.getlist('file')
-    response = vision_views.get_vision_result_by_file(files[0])
-    filenames = list(map(lambda x: upload_image(x), files))
-    return JsonResponse({'status': 'OK', 'image_url': list(map(lambda x:hostname+"/v1/download/"+x,filenames))})
+    try:
+        files = request.FILES.getlist('file')
+        post_type = request.POST['post_type']
+        response = vision_views.get_vision_result_by_file(files[0])
+        filenames = list(map(lambda x: upload_image(x), files))
+        vision_views.insert_vision_result(response[0],response[1],post_type=post_type,url=hostname+"/v1/download/"+filenames[0])
+        return JsonResponse({'status': 'OK', 'image_url': list(map(lambda x:hostname+"/v1/download/"+x,filenames))})
+    except Exception as e:
+        return JsonResponse({'status':'Failure',"message":str(e)})
+
 
 
 def delete_image(request, filename):
@@ -45,5 +54,8 @@ def index(request):
 
 
 def upload_image(file):
-    bucket.upload_fileobj(file, file.name)
-    return file.name
+    filename = ".".join([uuid.uuid4().hex,file.name.split(".")[-1]])
+    bucket.upload_fileobj(file,filename)
+    return filename
+
+

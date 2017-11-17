@@ -26,7 +26,7 @@ SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['220.230.121.76','localhost','127.0.0.1','[::1]']
 
 
 # Application definition
@@ -34,6 +34,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'aws_controller.apps.AwsControllerConfig',
     'vision_controller.apps.VisionControllerConfig',
+    'batch_controller.apps.BatchControllerConfig',
     'rest_framework_swagger',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -79,6 +80,9 @@ WSGI_APPLICATION = 'settings.wsgi.application'
 
 DATABASES = {
     'default': {
+        # dev settings
+        # 'ENGINE': 'django.db.backends.sqlite3',
+        # Prod settings
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {
             'read_default_file': os.path.join(BASE_DIR,'my.cnf'),

@@ -109,5 +109,5 @@ ENV/
 # app key
 *.json
 
-# sqllite
-db.sqlite3
+# mysql config
+my.cnf
