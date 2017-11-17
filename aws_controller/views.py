@@ -12,8 +12,8 @@ from vision_controller import views as vision_views
 bucket_name = 'papao-s3-bucket'
 s3 = boto3.resource('s3')
 bucket = s3.Bucket(bucket_name)
-#hostname = "220.230.121.76:8000"
-hostname = "localhost:8000"
+hostname = "220.230.121.76:8000"
+# hostname = "localhost:8000"
 
 def get_image(request, filename):
     f = tempfile.TemporaryFile()
