@@ -28,9 +28,13 @@ def post_image(request):
         files = request.FILES.getlist('file')
         post_type = request.POST['post_type']
         response = vision_views.get_vision_result_by_file(files[0])
+        # !!FIXIT!! : result filtering 하여 축종과 품종을 추출해야 함.
+        race_type = '진돗개'
+        animal_type = '개'
         filenames = list(map(lambda x: upload_image(x), files))
         vision_views.insert_vision_result(response[0],response[1],post_type=post_type,url=hostname+"/v1/download/"+filenames[0])
-        return JsonResponse({'status': 'OK', 'image_url': list(map(lambda x:hostname+"/v1/download/"+x,filenames))})
+        return JsonResponse({'status': 'OK', 'image_url': list(map(lambda x:hostname+"/v1/download/"+x,filenames)),
+                             'race_type':race_type, 'animal_type':animal_type})
     except Exception as e:
         return JsonResponse({'status':'Failure',"message":str(e)})
 

@@ -60,7 +60,7 @@ def get_vision_result_by_file(file):
     color_results = get_image_color_results(response)
     label_results = get_label_annotation_results(response)
     file.seek(0)
-    return [color_results,label_results]
+    return [color_results,label_results],
 
 
 def get_image_color_results(res):
