@@ -5,7 +5,6 @@ from batch_controller.models import ImageTb, PostTb
 
 
 def get_image_url_list():
-    import pdb;pdb.set_trace()
     entry = ImageTb.objects.get()
     return
 
