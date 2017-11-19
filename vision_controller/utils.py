@@ -10,3 +10,9 @@ def download_file(url):
     except Exception as e:
         print("Error on download file : %s" % e)
         raise e
+
+def download_files(urls):
+    try:
+        return list(map(lambda x:download_file(x),urls))
+    except Exception as e:
+        raise e

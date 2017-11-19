@@ -7,19 +7,19 @@ import mimetypes
 import uuid
 from vision_controller import views as vision_views
 
-
-
 bucket_name = 'papao-s3-bucket'
 s3 = boto3.resource('s3')
 bucket = s3.Bucket(bucket_name)
 hostname = "220.230.121.76:8000"
+
+
 # hostname = "localhost:8000"
 
 def get_image(request, filename):
     f = tempfile.TemporaryFile()
     bucket.download_fileobj(filename, f)
     f.seek(0)
-    return HttpResponse(f.read(),content_type=mimetypes.guess_type(filename))
+    return HttpResponse(f.read(), content_type=mimetypes.guess_type(filename))
 
 
 @csrf_exempt
@@ -32,12 +32,13 @@ def post_image(request):
         race_type = '진돗개'
         animal_type = '개'
         filenames = list(map(lambda x: upload_image(x), files))
-        vision_views.insert_vision_result(response[0],response[1],post_type=post_type,url=hostname+"/v1/download/"+filenames[0])
-        return JsonResponse({'status': 'OK', 'image_url': list(map(lambda x:hostname+"/v1/download/"+x,filenames)),
-                             'race_type':race_type, 'animal_type':animal_type})
+        vision_views.insert_vision_result(color_result=response.color_results, label_result=response.label_results,
+                                          post_type=post_type, url=hostname + "/v1/download/" + filenames[0])
+        return JsonResponse(
+            {'status': 'OK', 'image_url': list(map(lambda x: hostname + "/v1/download/" + x, filenames)),
+             'race_type': race_type, 'animal_type': animal_type})
     except Exception as e:
-        return JsonResponse({'status':'Failure',"message":str(e)})
-
+        return JsonResponse({'status': 'Failure', "message": str(e)})
 
 
 def delete_image(request, filename):
@@ -58,8 +59,6 @@ def index(request):
 
 
 def upload_image(file):
-    filename = ".".join([uuid.uuid4().hex,file.name.split(".")[-1]])
-    bucket.upload_fileobj(file,filename)
+    filename = ".".join([uuid.uuid4().hex, file.name.split(".")[-1]])
+    bucket.upload_fileobj(file, filename)
     return filename
-
-
