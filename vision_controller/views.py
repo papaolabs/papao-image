@@ -106,7 +106,9 @@ def get_label_annotation_results(res):
 
 
 def filter_labels(label):
-    return (label not in filter_list)
+    #return (label not in filter_list)
+    # 전체 배치 추출을 위한 임시 값
+    return True
 
 
 def insert_vision_result(color_results,label_results, post_type, url, post_id=-1):
