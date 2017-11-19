@@ -1,4 +1,5 @@
 from django.db import models
+from batch_controller.models import PostTb
 
 # Create your models here.
 
@@ -12,8 +13,10 @@ class VisionTb(models.Model):
     color_fraction = models.CharField(max_length=255)
     label = models.CharField(max_length=255)
     label_score = models.CharField(max_length=255)
+    post_id = models.BigIntegerField(default=-1)
     created_date = models.DateTimeField(auto_now_add=True, blank=True)
     modified_date = models.DateTimeField(auto_now_add=True, blank=True)
+
     class Meta:
         managed = True
         db_table = 'vision_tb'

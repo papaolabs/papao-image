@@ -3,6 +3,7 @@ import os
 from django.shortcuts import render
 from google.cloud import vision
 from google.cloud.vision import types
+import json
 import vision_controller.utils
 from vision_controller.models import VisionTb
 
@@ -13,12 +14,18 @@ except KeyError:
     raise
 
 client = vision.ImageAnnotatorClient()
-vision_request = {
-    'image': None,
-    'features': [{'type': vision.enums.Feature.Type.LABEL_DETECTION},
-                 {'type': vision.enums.Feature.Type.IMAGE_PROPERTIES},
-                 {'type': vision.enums.Feature.Type.SAFE_SEARCH_DETECTION}]
-}
+
+# vision_request = {
+#     'image': None,
+#     'features': [{'type': vision.enums.Feature.Type.LABEL_DETECTION},
+#                  {'type': vision.enums.Feature.Type.IMAGE_PROPERTIES},
+#                  {'type': vision.enums.Feature.Type.SAFE_SEARCH_DETECTION}]
+# }
+
+VisionRequest = collections.namedtuple('VisionRequest',['image','features'])
+VisionRequest.__new__.__defaults__ = (None,[{'type': vision.enums.Feature.Type.LABEL_DETECTION},
+                                             {'type': vision.enums.Feature.Type.IMAGE_PROPERTIES},
+                                             {'type': vision.enums.Feature.Type.SAFE_SEARCH_DETECTION}])
 
 filter_list = ["dog",
                "dorgi",
@@ -46,8 +53,8 @@ LabelResults = collections.namedtuple('LabelResults',['label','score'])
 
 def get_vision_result(url):
     image = vision_controller.utils.download_file(url)
-    vision_request['image'] = types.Image(content=image.read())
-    response = client.annotate_image(vision_request)
+    vision_request = VisionRequest(image=types.Image(content=image.read()))
+    response = client.annotate_image(vision_request._asdict())
     # import pdb;pdb.set_trace()
     color_results = get_image_color_results(response)
     label_results = get_label_annotation_results(response)
@@ -55,8 +62,8 @@ def get_vision_result(url):
 
 
 def get_vision_result_by_file(file):
-    vision_request['image'] = types.Image(content=file.read())
-    response = client.annotate_image(vision_request)
+    vision_request = VisionRequest(image=types.Image(content=file.read()))
+    response = client.annotate_image(vision_request._asdict())
     color_results = get_image_color_results(response)
     label_results = get_label_annotation_results(response)
     file.seek(0)
@@ -91,9 +98,9 @@ def filter_labels(label):
     return (label not in filter_list)
 
 
-def insert_vision_result(color_result, label_result, post_type, url):
+def insert_vision_result(color_result, label_result, post_type, url, post_id=-1):
     entity = VisionTb(post_type=post_type,image_url=url,
                       color_rgb=color_result.color,color_score=color_result.score,
                       color_fraction=color_result.fraction,label=label_result.label,
-                      label_score=label_result.score)
+                      label_score=label_result.score, post_id=post_id)
     entity.save()
