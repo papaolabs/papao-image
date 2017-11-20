@@ -6,6 +6,8 @@ import tempfile
 import mimetypes
 import uuid
 from vision_controller import views as vision_views
+from celery import task
+from shutil import copyfileobj
 
 bucket_name = 'papao-s3-bucket'
 s3 = boto3.resource('s3')
@@ -23,7 +25,7 @@ def get_image(request, filename):
 
 
 @csrf_exempt
-def post_image(request):
+def post_image_with_vision(request):
     try:
         files = request.FILES.getlist('file')
         post_type = request.POST['post_type']
@@ -36,7 +38,18 @@ def post_image(request):
                                           post_type=post_type, url=hostname + "/v1/download/" + filenames[0])
         return JsonResponse(
             {'status': 'OK', 'image_url': list(map(lambda x: hostname + "/v1/download/" + x, filenames)),
-             'race_type': race_type, 'animal_type': animal_type})
+             'kind_code': race_type, 'up_kind_code': animal_type})
+    except Exception as e:
+        return JsonResponse({'status': 'Failure', "message": str(e)})
+
+@csrf_exempt
+def post_image(request):
+    try:
+        import pdb;pdb.set_trace()
+        files = request.FILES.getlist('file')
+        filenames = list(map(lambda x: upload_image(x), files))
+        return JsonResponse(
+            {'status': 'OK', 'image_url': list(map(lambda x: hostname + "/v1/download/" + x, filenames))})
     except Exception as e:
         return JsonResponse({'status': 'Failure', "message": str(e)})
 
@@ -62,3 +75,9 @@ def upload_image(file):
     filename = ".".join([uuid.uuid4().hex, file.name.split(".")[-1]])
     bucket.upload_fileobj(file, filename)
     return filename
+
+@task(ignore_result=True)
+def call_vision_api(file, filename, post_type):
+    response = vision_views.get_vision_result_by_file(file)
+    vision_views.insert_vision_result(color_result=response.color_results, label_result=response.label_results,
+                                      post_type=post_type, url=hostname + "/v1/download/" + filename)
