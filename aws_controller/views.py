@@ -34,7 +34,7 @@ def post_image_with_vision(request):
         race_type = '진돗개'
         animal_type = '개'
         filenames = list(map(lambda x: upload_image(x), files))
-        vision_views.insert_vision_result(color_result=response.color_results, label_result=response.label_results,
+        vision_views.insert_vision_result(color_results=response.color_results, label_results=response.label_results,
                                           post_type=post_type, url=hostname + "/v1/download/" + filenames[0])
         return JsonResponse(
             {'status': 'OK', 'image_url': list(map(lambda x: hostname + "/v1/download/" + x, filenames)),
@@ -75,9 +75,3 @@ def upload_image(file):
     filename = ".".join([uuid.uuid4().hex, file.name.split(".")[-1]])
     bucket.upload_fileobj(file, filename)
     return filename
-
-@task(ignore_result=True)
-def call_vision_api(file, filename, post_type):
-    response = vision_views.get_vision_result_by_file(file)
-    vision_views.insert_vision_result(color_result=response.color_results, label_result=response.label_results,
-                                      post_type=post_type, url=hostname + "/v1/download/" + filename)

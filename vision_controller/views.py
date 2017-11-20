@@ -111,7 +111,7 @@ def filter_labels(label):
     return True
 
 
-def insert_vision_result(color_results,label_results, post_type, url, post_id=-1):
+def insert_vision_result(color_results, label_results, post_type, url, post_id=-1):
     entity = VisionTb(post_type=post_type, image_url=url,
                       color_rgb=color_results.color, color_score=color_results.score,
                       color_fraction=color_results.fraction, label=label_results.label,
