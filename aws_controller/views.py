@@ -45,7 +45,6 @@ def post_image_with_vision(request):
 @csrf_exempt
 def post_image(request):
     try:
-        import pdb;pdb.set_trace()
         files = request.FILES.getlist('file')
         filenames = list(map(lambda x: upload_image(x), files))
         return JsonResponse(
