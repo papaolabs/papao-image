@@ -6,8 +6,6 @@ import tempfile
 import mimetypes
 import uuid
 from vision_controller import views as vision_views
-from celery import task
-from shutil import copyfileobj
 
 bucket_name = 'papao-s3-bucket'
 s3 = boto3.resource('s3')
