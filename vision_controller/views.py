@@ -111,6 +111,19 @@ def filter_labels(label):
     return True
 
 
+def get_search_result_with_time(post_id,start_date,end_date):
+    query = VisionTb.objects.filter(post_id__exact=post_id).values()
+    candidate = VisionTb.objects.filter(up_kind_code__exact=-1)\
+                                .filter(happen_date__gte=start_date)\
+                                .filter(happen_date__lte=end_date)\
+                                .values()
+
+    test = list(candidate)
+    # for entity in candidate:
+    # import pdb;pdb.set_trace()
+
+
+
 def insert_vision_result(color_results, label_results, post_type, url, post_id=-1):
     entity = VisionTb(post_type=post_type, image_url=url,
                       color_rgb=color_results.color, color_score=color_results.score,

@@ -29,10 +29,11 @@ def post_image_with_vision(request):
     try:
         files = request.FILES.getlist('file')
         post_type = request.POST['post_type']
+        # import pdb;pdb.set_trace()
         response = vision_views.get_vision_result_by_file(files[0])
         # !!FIXIT!! : result filtering 하여 축종과 품종을 추출해야 함.
-        race_type = '진돗개'
-        animal_type = '개'
+        race_type = 417000
+        animal_type = 114
         filenames = list(map(lambda x: upload_image(x), files))
         vision_views.insert_vision_result(color_results=response.color_results, label_results=response.label_results,
                                           post_type=post_type, url=hostname + "/v1/download/" + filenames[0])

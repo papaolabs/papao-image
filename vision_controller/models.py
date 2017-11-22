@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.db import models
 from batch_controller.models import PostTb
 
@@ -13,7 +15,10 @@ class VisionTb(models.Model):
     color_fraction = models.CharField(max_length=255)
     label = models.CharField(max_length=255)
     label_score = models.CharField(max_length=255)
+    up_kind_code = models.BigIntegerField(default=-1)
+    kind_code = models.BigIntegerField(default=-1)
     post_id = models.BigIntegerField(default=-1)
+    happen_date = models.DateTimeField(blank=True, default=datetime.now)
     created_date = models.DateTimeField(auto_now_add=True, blank=True)
     modified_date = models.DateTimeField(auto_now_add=True, blank=True)
 
