@@ -8,7 +8,6 @@ class ImageTb(models.Model):
     updated_date = models.DateTimeField(blank=True, null=True)
     post = models.ForeignKey('PostTb', models.DO_NOTHING, blank=True, null=True)
     url = models.CharField(max_length=255, blank=True, null=True)
-
     class Meta:
         managed = False
         db_table = 'image_tb'
@@ -36,7 +35,7 @@ class PostTb(models.Model):
     notice_begin_date = models.DateTimeField(blank=True, null=True)
     notice_end_date = models.DateTimeField(blank=True, null=True)
     notice_id = models.CharField(max_length=255, blank=True, null=True)
-    post_type = models.CharField(max_length=255, blank=True, null=True)
+    post_type = models.CharField(max_length=255, blank=True, null=True) # SYSTEM, PROTECTING, ROADREPORT, MISSING, UNKNOWN
     shelter_code = models.BigIntegerField(blank=True, null=True)
     shelter_contact = models.CharField(max_length=255, blank=True, null=True)
     shelter_name = models.CharField(max_length=255, blank=True, null=True)

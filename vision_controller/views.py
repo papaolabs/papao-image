@@ -3,6 +3,7 @@ import os
 from django.shortcuts import render
 from google.cloud import vision
 from google.cloud.vision import types
+import json
 import vision_controller.utils
 from vision_controller.models import VisionTb
 
@@ -13,12 +14,11 @@ except KeyError:
     raise
 
 client = vision.ImageAnnotatorClient()
-vision_request = {
-    'image': None,
-    'features': [{'type': vision.enums.Feature.Type.LABEL_DETECTION},
-                 {'type': vision.enums.Feature.Type.IMAGE_PROPERTIES},
-                 {'type': vision.enums.Feature.Type.SAFE_SEARCH_DETECTION}]
-}
+
+VisionRequest = collections.namedtuple('VisionRequest', ['image', 'features'])
+VisionRequest.__new__.__defaults__ = (None, [{'type': vision.enums.Feature.Type.LABEL_DETECTION},
+                                             {'type': vision.enums.Feature.Type.IMAGE_PROPERTIES},
+                                             {'type': vision.enums.Feature.Type.SAFE_SEARCH_DETECTION}])
 
 filter_list = ["dog",
                "dorgi",
@@ -40,27 +40,45 @@ filter_list = ["dog",
                "vertebrate",
                "animal shelter"]
 
-ColorResults = collections.namedtuple('ColorResults',['color','score','fraction'])
-LabelResults = collections.namedtuple('LabelResults',['label','score'])
+ColorResults = collections.namedtuple('ColorResults', ['color', 'score', 'fraction'])
+LabelResults = collections.namedtuple('LabelResults', ['label', 'score'])
+VisionResults = collections.namedtuple('VisionResults', ['label_results', 'color_results'])
 
 
-def get_vision_result(url):
+def get_vision_result_by_url(url):
     image = vision_controller.utils.download_file(url)
-    vision_request['image'] = types.Image(content=image.read())
-    response = client.annotate_image(vision_request)
-    # import pdb;pdb.set_trace()
+    vision_request = VisionRequest(image=types.Image(content=image.read()))
+    response = client.annotate_image(vision_request._asdict())
     color_results = get_image_color_results(response)
     label_results = get_label_annotation_results(response)
-    return [color_results,label_results]
+    return VisionResults(color_results=color_results, label_results=label_results)
 
 
 def get_vision_result_by_file(file):
-    vision_request['image'] = types.Image(content=file.read())
-    response = client.annotate_image(vision_request)
-    color_results = get_image_color_results(response)
-    label_results = get_label_annotation_results(response)
+    vision_request = VisionRequest(image=types.Image(content=file.read()))
+    response = client.annotate_image(vision_request._asdict())
     file.seek(0)
-    return [color_results,label_results]
+    return encode_vision_results(response)
+
+
+def get_batch_vision_result(entries):
+    urls = list(map(lambda x:x[0],entries))
+    post_ids = list(map(lambda x:x[1],entries))
+    images = vision_controller.utils.download_files(urls)
+    vision_requests = list(map(lambda x: VisionRequest(image=types.Image(content=x.read()))._asdict(), images))
+    response = client.batch_annotate_images(vision_requests)
+    results = list(map(lambda x: encode_vision_results(x), response.responses))
+    results = list(zip(results,urls, post_ids))
+    list(map(lambda x: insert_vision_result(color_results=x[0].color_results,
+                                           label_results=x[0].label_results,
+                                            post_type="SYSTEM",url=x[1], post_id=x[2]), results))
+
+
+
+def encode_vision_results(res):
+    color_results = get_image_color_results(res)
+    label_results = get_label_annotation_results(res)
+    return VisionResults(color_results=color_results, label_results=label_results)
 
 
 def get_image_color_results(res):
@@ -68,10 +86,10 @@ def get_image_color_results(res):
     # protobuf ListValue map 가능 여부 확인 필요
     # color_list = list(map(lambda x:' '.join([x.color.red,x.color.green,x.color.blue]),colors))
     # 임시로 for문 사용
-    result = ColorResults(color=list(),score=list(),fraction=list())
+    result = ColorResults(color=list(), score=list(), fraction=list())
     for item in colors:
         x = item.color
-        result.color.append(' '.join([str(x.red),str(x.green),str(x.blue)]))
+        result.color.append(' '.join([str(x.red), str(x.green), str(x.blue)]))
         result.score.append(str(item.score))
         result.fraction.append(str(item.pixel_fraction))
     return result
@@ -79,7 +97,7 @@ def get_image_color_results(res):
 
 def get_label_annotation_results(res):
     labels = res.label_annotations
-    result = LabelResults(label=list(),score=list())
+    result = LabelResults(label=list(), score=list())
     for item in labels:
         if filter_labels(item.description):
             result.label.append(item.description)
@@ -88,12 +106,27 @@ def get_label_annotation_results(res):
 
 
 def filter_labels(label):
-    return (label not in filter_list)
+    #return (label not in filter_list)
+    # 전체 배치 추출을 위한 임시 값
+    return True
 
 
-def insert_vision_result(color_result, label_result, post_type, url):
-    entity = VisionTb(post_type=post_type,image_url=url,
-                      color_rgb=color_result.color,color_score=color_result.score,
-                      color_fraction=color_result.fraction,label=label_result.label,
-                      label_score=label_result.score)
+def get_search_result_with_time(post_id,start_date,end_date):
+    query = VisionTb.objects.filter(post_id__exact=post_id).values()
+    candidate = VisionTb.objects.filter(up_kind_code__exact=-1)\
+                                .filter(happen_date__gte=start_date)\
+                                .filter(happen_date__lte=end_date)\
+                                .values()
+
+    test = list(candidate)
+    # for entity in candidate:
+    # import pdb;pdb.set_trace()
+
+
+
+def insert_vision_result(color_results, label_results, post_type, url, post_id=-1):
+    entity = VisionTb(post_type=post_type, image_url=url,
+                      color_rgb=color_results.color, color_score=color_results.score,
+                      color_fraction=color_results.fraction, label=label_results.label,
+                      label_score=label_results.score, post_id=post_id)
     entity.save()
