@@ -1,11 +1,15 @@
 import collections
 import os
 from django.shortcuts import render
+from django.forms.models import model_to_dict
 from google.cloud import vision
 from google.cloud.vision import types
 import json
+import colorsys
 import vision_controller.utils
 from vision_controller.models import VisionTb
+import numpy as np
+import ast
 
 try:
     os.environ['GOOGLE_APPLICATION_CREDENTIALS']
@@ -43,6 +47,7 @@ filter_list = ["dog",
 ColorResults = collections.namedtuple('ColorResults', ['color', 'score', 'fraction'])
 LabelResults = collections.namedtuple('LabelResults', ['label', 'score'])
 VisionResults = collections.namedtuple('VisionResults', ['label_results', 'color_results'])
+
 
 
 def get_vision_result_by_url(url):
@@ -112,15 +117,24 @@ def filter_labels(label):
 
 
 def get_search_result_with_time(post_id,start_date,end_date):
-    query = VisionTb.objects.filter(post_id__exact=post_id).values()
-    candidate = VisionTb.objects.filter(up_kind_code__exact=-1)\
+    query = VisionTb.objects.get(post_id__exact=post_id)
+    query_hsv = get_hsv_from_rgb(query)
+
+    # double list comprehension 이용하여 rgb -> hsv 변환 후 distance measure
+
+    candidate = VisionTb.objects.filter(up_kind_code__exact=query.up_kind_code)\
+                                .filter(kind_code__exact=query.kind_code)\
                                 .filter(happen_date__gte=start_date)\
                                 .filter(happen_date__lte=end_date)\
                                 .values()
 
-    test = list(candidate)
+    # test = get_hsv_from_rgb(candidate[0])
+    test = np.asarray(list(map(lambda x:get_hsv_from_rgb(x),candidate)))
+
+    #import pdb;pdb.set_trace()
+
     # for entity in candidate:
-    # import pdb;pdb.set_trace()
+
 
 
 
@@ -130,3 +144,13 @@ def insert_vision_result(color_results, label_results, post_type, url, post_id=-
                       color_fraction=color_results.fraction, label=label_results.label,
                       label_score=label_results.score, post_id=post_id)
     entity.save()
+
+def get_hsv_from_rgb(image):
+    if isinstance(image,VisionTb):
+        image = model_to_dict(image)
+    color_list = ast.literal_eval(image['color_rgb'])
+    color_list = [item.split() for item in color_list ]
+    color_list = [list(map(lambda x:float(x),rgb_values)) for rgb_values in color_list]
+    return np.asarray([colorsys.rgb_to_hsv(*rgb_values) for rgb_values in color_list])
+
+
