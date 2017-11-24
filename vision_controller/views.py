@@ -1,5 +1,6 @@
 import collections
 import os
+
 from django.shortcuts import render
 from django.forms.models import model_to_dict
 from google.cloud import vision
@@ -118,22 +119,21 @@ def filter_labels(label):
 
 def get_search_result_with_time(post_id,start_date,end_date):
     query = VisionTb.objects.get(post_id__exact=post_id)
-    query_hsv = get_hsv_from_rgb(query)
-
+    query_np = get_hsv_from_rgb(query)
     # double list comprehension 이용하여 rgb -> hsv 변환 후 distance measure
-
     candidate = VisionTb.objects.filter(up_kind_code__exact=query.up_kind_code)\
                                 .filter(kind_code__exact=query.kind_code)\
                                 .filter(happen_date__gte=start_date)\
                                 .filter(happen_date__lte=end_date)\
                                 .values()
-
-    # test = get_hsv_from_rgb(candidate[0])
-    test = np.asarray(list(map(lambda x:get_hsv_from_rgb(x),candidate)))
-
+    cand_np = np.asarray(list(map(lambda x:get_hsv_from_rgb(x),candidate)))
+    distance = get_hsv_distance(query_np,cand_np)
+    #color_ratio = np.asarray(list(map(lambda x:float(x),ast.literal_eval(query.color_fraction))))
+    color_score = np.asarray(list(map(lambda x:float(x),ast.literal_eval(query.color_score))))
     #import pdb;pdb.set_trace()
+    result = np.sum(distance * color_score, axis=1)
 
-    # for entity in candidate:
+
 
 
 
@@ -145,6 +145,7 @@ def insert_vision_result(color_results, label_results, post_type, url, post_id=-
                       label_score=label_results.score, post_id=post_id)
     entity.save()
 
+
 def get_hsv_from_rgb(image):
     if isinstance(image,VisionTb):
         image = model_to_dict(image)
@@ -152,5 +153,12 @@ def get_hsv_from_rgb(image):
     color_list = [item.split() for item in color_list ]
     color_list = [list(map(lambda x:float(x),rgb_values)) for rgb_values in color_list]
     return np.asarray([colorsys.rgb_to_hsv(*rgb_values) for rgb_values in color_list])
+
+
+def get_hsv_distance(query_np,cand_np):
+    dh = np.minimum(abs(cand_np[:,:,0]-query_np[None,:,0]), 360-abs(cand_np[:,:,0]-query_np[None,:,0])) / 180.0
+    ds = abs(cand_np[:,:,1]-query_np[None,:,1])
+    dv = abs(cand_np[:,:,2]-query_np[None,:,2]) / 255.0
+    return np.sqrt(dh*dh+ds*ds+dv*dv)
 
 
