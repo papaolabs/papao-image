@@ -1,3 +1,5 @@
+import datetime
+import time
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -64,6 +66,15 @@ def delete_image(request, filename):
     )
     return JsonResponse(response)
 
+def search_image(request, post_id):
+    now = datetime.datetime.now()
+    ts = time.time()
+    result_post, result_url = vision_views.get_search_result_with_time(post_id=post_id,start_date=now - datetime.timedelta(weeks=4),end_date=now)
+    print(time.time() - ts)
+    # import pdb;pdb.set_trace()
+    for i, item in enumerate(result_post):
+        item['url'] = result_url[i]
+    return JsonResponse({'status':"OK","total_num":len(result_post)})
 
 def index(request):
     return HttpResponse("Hello, world!")

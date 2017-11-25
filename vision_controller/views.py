@@ -1,6 +1,8 @@
 import collections
 import os
+from operator import itemgetter
 
+import time
 from django.shortcuts import render
 from django.forms.models import model_to_dict
 from google.cloud import vision
@@ -9,6 +11,7 @@ import json
 import colorsys
 import vision_controller.utils
 from vision_controller.models import VisionTb
+from batch_controller.models import PostTb
 import numpy as np
 import ast
 
@@ -50,7 +53,6 @@ LabelResults = collections.namedtuple('LabelResults', ['label', 'score'])
 VisionResults = collections.namedtuple('VisionResults', ['label_results', 'color_results'])
 
 
-
 def get_vision_result_by_url(url):
     image = vision_controller.utils.download_file(url)
     vision_request = VisionRequest(image=types.Image(content=image.read()))
@@ -68,17 +70,16 @@ def get_vision_result_by_file(file):
 
 
 def get_batch_vision_result(entries):
-    urls = list(map(lambda x:x[0],entries))
-    post_ids = list(map(lambda x:x[1],entries))
+    urls = list(map(lambda x: x[0], entries))
+    post_ids = list(map(lambda x: x[1], entries))
     images = vision_controller.utils.download_files(urls)
     vision_requests = list(map(lambda x: VisionRequest(image=types.Image(content=x.read()))._asdict(), images))
     response = client.batch_annotate_images(vision_requests)
     results = list(map(lambda x: encode_vision_results(x), response.responses))
-    results = list(zip(results,urls, post_ids))
+    results = list(zip(results, urls, post_ids))
     list(map(lambda x: insert_vision_result(color_results=x[0].color_results,
-                                           label_results=x[0].label_results,
-                                            post_type="SYSTEM",url=x[1], post_id=x[2]), results))
-
+                                            label_results=x[0].label_results,
+                                            post_type="SYSTEM", url=x[1], post_id=x[2]), results))
 
 
 def encode_vision_results(res):
@@ -112,30 +113,33 @@ def get_label_annotation_results(res):
 
 
 def filter_labels(label):
-    #return (label not in filter_list)
+    # return (label not in filter_list)
     # 전체 배치 추출을 위한 임시 값
     return True
 
-
-def get_search_result_with_time(post_id,start_date,end_date):
+def get_search_result_with_time(post_id, start_date, end_date):
     query = VisionTb.objects.get(post_id__exact=post_id)
     query_np = get_hsv_from_rgb(query)
     # double list comprehension 이용하여 rgb -> hsv 변환 후 distance measure
-    candidate = VisionTb.objects.filter(up_kind_code__exact=query.up_kind_code)\
-                                .filter(kind_code__exact=query.kind_code)\
-                                .filter(happen_date__gte=start_date)\
-                                .filter(happen_date__lte=end_date)\
-                                .values()
-    cand_np = np.asarray(list(map(lambda x:get_hsv_from_rgb(x),candidate)))
-    distance = get_hsv_distance(query_np,cand_np)
-    #color_ratio = np.asarray(list(map(lambda x:float(x),ast.literal_eval(query.color_fraction))))
-    color_score = np.asarray(list(map(lambda x:float(x),ast.literal_eval(query.color_score))))
-    #import pdb;pdb.set_trace()
-    result = np.sum(distance * color_score, axis=1)
-
-
-
-
+    candidate = VisionTb.objects.filter(up_kind_code__exact=query.up_kind_code) \
+        .filter(kind_code__exact=query.kind_code) \
+        .filter(happen_date__gte=start_date)\
+        .filter(happen_date__lte=end_date)
+    cand_id_url = candidate.values_list("post_id","image_url")
+    # import pdb;pdb.set_trace()
+    candidate = candidate.values()
+    cand_np = np.asarray(list(map(lambda x: get_hsv_from_rgb(x), candidate)))
+    distance = get_hsv_distance(query_np, cand_np)
+    # color_ratio = np.asarray(list(map(lambda x:float(x),ast.literal_eval(query.color_fraction))))
+    color_score = np.asarray(list(map(lambda x: float(x), ast.literal_eval(query.color_score))))
+    result_distance = np.sum(distance * (color_score), axis=1).tolist()
+    sorted_index = sorted(range(len(result_distance)), key=lambda k: result_distance[k])
+    post = PostTb.objects.filter(id__in=list(map(lambda x:x[0],cand_id_url))) \
+        .values("id","kind_name","happen_date","happen_place")
+    sorted_post = itemgetter(*sorted_index)(post)
+    sorted_url = itemgetter(*sorted_index)(list(map(lambda x:x[1],cand_id_url)))
+    return sorted_post,sorted_url
+    # return
 
 
 def insert_vision_result(color_results, label_results, post_type, url, post_id=-1):
@@ -147,18 +151,17 @@ def insert_vision_result(color_results, label_results, post_type, url, post_id=-
 
 
 def get_hsv_from_rgb(image):
-    if isinstance(image,VisionTb):
+    if isinstance(image, VisionTb):
         image = model_to_dict(image)
     color_list = ast.literal_eval(image['color_rgb'])
-    color_list = [item.split() for item in color_list ]
-    color_list = [list(map(lambda x:float(x),rgb_values)) for rgb_values in color_list]
+    color_list = [item.split() for item in color_list]
+    color_list = [list(map(lambda x: float(x), rgb_values)) for rgb_values in color_list]
     return np.asarray([colorsys.rgb_to_hsv(*rgb_values) for rgb_values in color_list])
 
 
-def get_hsv_distance(query_np,cand_np):
-    dh = np.minimum(abs(cand_np[:,:,0]-query_np[None,:,0]), 360-abs(cand_np[:,:,0]-query_np[None,:,0])) / 180.0
-    ds = abs(cand_np[:,:,1]-query_np[None,:,1])
-    dv = abs(cand_np[:,:,2]-query_np[None,:,2]) / 255.0
-    return np.sqrt(dh*dh+ds*ds+dv*dv)
-
-
+def get_hsv_distance(query_np, cand_np):
+    dh = np.minimum(abs(cand_np[:, :, 0] - query_np[None, :, 0]),
+                    360 - abs(cand_np[:, :, 0] - query_np[None, :, 0])) / 180.0
+    ds = abs(cand_np[:, :, 1] - query_np[None, :, 1])
+    dv = abs(cand_np[:, :, 2] - query_np[None, :, 2]) / 255.0
+    return np.sqrt(dh * dh + ds * ds + dv * dv)
