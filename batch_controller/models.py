@@ -46,3 +46,29 @@ class PostTb(models.Model):
     class Meta:
         managed = False
         db_table = 'post_tb'
+
+
+class CommentTb(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    created_date = models.DateTimeField(blank=True, null=True)
+    updated_date = models.DateTimeField(blank=True, null=True)
+    is_display = models.TextField(blank=True, null=True)  # This field type is a guess.
+    post = models.ForeignKey('PostTb', models.DO_NOTHING, blank=True, null=True)
+    text = models.CharField(max_length=255, blank=True, null=True)
+    user_id = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'comment_tb'
+
+
+class BookmarkTb(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    created_date = models.DateTimeField(blank=True, null=True)
+    updated_date = models.DateTimeField(blank=True, null=True)
+    post_id = models.BigIntegerField(blank=True, null=True)
+    user_id = models.BigIntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'bookmark_tb'
