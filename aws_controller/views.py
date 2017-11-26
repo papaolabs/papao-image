@@ -70,6 +70,7 @@ def delete_image(request, filename):
     return JsonResponse(response)
 
 
+@csrf_exempt
 def search_image(request, post_id):
     now = datetime.datetime.now()
     ts = time.time()
