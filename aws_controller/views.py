@@ -7,6 +7,7 @@ import boto3
 import tempfile
 import mimetypes
 import uuid
+from django.forms.models import model_to_dict
 from vision_controller import views as vision_views
 
 bucket_name = 'papao-s3-bucket'
@@ -43,6 +44,7 @@ def post_image_with_vision(request):
     except Exception as e:
         return JsonResponse({'status': 'Failure', "message": str(e)})
 
+
 @csrf_exempt
 def post_image(request):
     try:
@@ -66,15 +68,30 @@ def delete_image(request, filename):
     )
     return JsonResponse(response)
 
+
 def search_image(request, post_id):
     now = datetime.datetime.now()
     ts = time.time()
-    result_post, result_url = vision_views.get_search_result_with_time(post_id=post_id,start_date=now - datetime.timedelta(weeks=4),end_date=now)
+    result_post, result_url = vision_views.get_search_result_with_time(post_id=post_id,
+                                                                       start_date=now - datetime.timedelta(weeks=4),
+                                                                       end_date=now)
     print(time.time() - ts)
     # import pdb;pdb.set_trace()
+    temp_list = list()
     for i, item in enumerate(result_post):
-        item['url'] = result_url[i]
-    return JsonResponse({'status':"OK","total_num":len(result_post)})
+        temp = encode_post_to_result(item)
+        temp['imageUrls'] = [
+            {
+                "key": 0,
+                "url": result_url[i]
+            }
+        ]
+        temp_list.append(temp)
+    return JsonResponse({'currentPage': 0,
+                         "totalElements": 0,
+                         "totalPages": 0,
+                         "elements": temp_list})
+
 
 def index(request):
     return HttpResponse("Hello, world!")
@@ -84,3 +101,9 @@ def upload_image(file):
     filename = ".".join([uuid.uuid4().hex, file.name.split(".")[-1]])
     bucket.upload_fileobj(file, filename)
     return filename
+
+def encode_post_to_result(item):
+    return {"id":item.id,"createdDate":item.created_date,'updatedDate': item.updated_date,
+            "genderType":item.gender_type, "happenDate":item.happen_date, "happenPlace":item.happen_place,
+            "kindName":item.kind_name, "postType":item.post_type,"hitCount":item.hit_count,
+            "stateType":item.state_type}

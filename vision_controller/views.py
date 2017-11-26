@@ -1,10 +1,12 @@
 import collections
 import os
+from functools import reduce
 from operator import itemgetter
 
 import time
 from django.shortcuts import render
 from django.forms.models import model_to_dict
+from django.db.models import Q
 from google.cloud import vision
 from google.cloud.vision import types
 import json
@@ -117,6 +119,7 @@ def filter_labels(label):
     # 전체 배치 추출을 위한 임시 값
     return True
 
+
 def get_search_result_with_time(post_id, start_date, end_date):
     query = VisionTb.objects.get(post_id__exact=post_id)
     query_np = get_hsv_from_rgb(query)
@@ -134,12 +137,13 @@ def get_search_result_with_time(post_id, start_date, end_date):
     color_score = np.asarray(list(map(lambda x: float(x), ast.literal_eval(query.color_score))))
     result_distance = np.sum(distance * (color_score), axis=1).tolist()
     sorted_index = sorted(range(len(result_distance)), key=lambda k: result_distance[k])
-    post = PostTb.objects.filter(id__in=list(map(lambda x:x[0],cand_id_url))) \
-        .values("id","kind_name","happen_date","happen_place")
+    cand_id = list(map(lambda x:x[0],cand_id_url))
+    # post = PostTb.objects.filter(reduce(lambda x, y: x | y, [Q(id=id) for id in cand_id])).values()
+    post = [PostTb.objects.get(id__exact=id) for id in cand_id]
+    # import pdb;pdb.set_trace()
     sorted_post = itemgetter(*sorted_index)(post)
     sorted_url = itemgetter(*sorted_index)(list(map(lambda x:x[1],cand_id_url)))
     return sorted_post,sorted_url
-    # return
 
 
 def insert_vision_result(color_results, label_results, post_type, url, post_id=-1):
