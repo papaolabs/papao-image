@@ -1,3 +1,4 @@
+import ast
 import datetime
 
 from django.shortcuts import render
@@ -8,6 +9,26 @@ from vision_controller import views as vision_views
 
 batch_size = 10
 batch_target_weeks = 10
+
+filter_list = ["dog",
+               "dorgi",
+               "paw",
+               "fur",
+               "snout",
+               "puppy",
+               "kennel",
+               "carnivoran",
+               "companion",
+               "companion dog",
+               "dog crate",
+               "dog breed",
+               "dog like mammal",
+               "dog crossbreeds",
+               "dog breed group",
+               "cat like mammal",
+               "mammal",
+               "vertebrate",
+               "animal shelter"]
 
 
 def feature_extraction_batch_job():
@@ -30,4 +51,26 @@ def feature_extraction_batch_job():
 def test(request):
     # feature_extraction_batch_job()
     now = datetime.datetime.now()
-    vision_views.get_search_result_with_time(120,now-datetime.timedelta(weeks=2),now)
+    # vision_views.get_search_result_with_time(120,now-datetime.timedelta(weeks=2),now)
+    get_kind_codes_from_vision_table()
+
+
+def get_kind_codes_from_vision_table():
+    entries = VisionTb.objects.all().values()
+    # import pdb;pdb.set_trace()
+    for entry in entries:
+        up_kind_code, kind_code = filter_label_annotations(ast.literal_eval(entry['label']))
+        if up_kind_code != entry['up_kind_code']:
+            print(entry['label'])
+
+
+
+def filter_label_annotations(label):
+    up_kind_code = -1
+    kind_code = -1
+    for item in label:
+        if "dog" in item and up_kind_code == -1:
+            up_kind_code = 417000
+        elif "cat" in item and up_kind_code == -1:
+            up_kind_code = 422400
+    return up_kind_code, kind_code

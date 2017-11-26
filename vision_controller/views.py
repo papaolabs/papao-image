@@ -30,26 +30,6 @@ VisionRequest.__new__.__defaults__ = (None, [{'type': vision.enums.Feature.Type.
                                              {'type': vision.enums.Feature.Type.IMAGE_PROPERTIES},
                                              {'type': vision.enums.Feature.Type.SAFE_SEARCH_DETECTION}])
 
-filter_list = ["dog",
-               "dorgi",
-               "paw",
-               "fur",
-               "snout",
-               "puppy",
-               "kennel",
-               "carnivoran",
-               "companion",
-               "companion dog",
-               "dog crate",
-               "dog breed",
-               "dog like mammal",
-               "dog crossbreeds",
-               "dog breed group",
-               "cat like mammal",
-               "mammal",
-               "vertebrate",
-               "animal shelter"]
-
 ColorResults = collections.namedtuple('ColorResults', ['color', 'score', 'fraction'])
 LabelResults = collections.namedtuple('LabelResults', ['label', 'score'])
 VisionResults = collections.namedtuple('VisionResults', ['label_results', 'color_results'])
@@ -108,16 +88,9 @@ def get_label_annotation_results(res):
     labels = res.label_annotations
     result = LabelResults(label=list(), score=list())
     for item in labels:
-        if filter_labels(item.description):
-            result.label.append(item.description)
-            result.score.append(str(item.score))
+        result.label.append(item.description)
+        result.score.append(str(item.score))
     return result
-
-
-def filter_labels(label):
-    # return (label not in filter_list)
-    # 전체 배치 추출을 위한 임시 값
-    return True
 
 
 def get_search_result_with_time(post_id, start_date, end_date):

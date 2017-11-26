@@ -10,6 +10,7 @@ import uuid
 from django.forms.models import model_to_dict
 from batch_controller.models import CommentTb, BookmarkTb
 from vision_controller import views as vision_views
+from vision_controller.models import VisionTb
 
 bucket_name = 'papao-s3-bucket'
 s3 = boto3.resource('s3')
@@ -67,6 +68,7 @@ def delete_image(request, filename):
             ]
         }
     )
+    VisionTb.objects.filter(image_url__endswith=filename).delete()
     return JsonResponse(response)
 
 
