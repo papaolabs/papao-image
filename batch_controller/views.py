@@ -3,7 +3,7 @@ import datetime
 
 from django.shortcuts import render
 
-from batch_controller.models import ImageTb, PostTb
+from batch_controller.models import ImageTb, PostTb, BreedTb
 from vision_controller.models import VisionTb
 from vision_controller import views as vision_views
 
@@ -29,6 +29,10 @@ filter_list = ["dog",
                "mammal",
                "vertebrate",
                "animal shelter"]
+
+mapping_dict = {
+    "maltese" : "말티즈"
+}
 
 
 def feature_extraction_batch_job():
@@ -56,21 +60,28 @@ def test(request):
 
 
 def get_kind_codes_from_vision_table():
-    entries = VisionTb.objects.all().values()
-    # import pdb;pdb.set_trace()
-    for entry in entries:
-        up_kind_code, kind_code = filter_label_annotations(ast.literal_eval(entry['label']))
-        if up_kind_code != entry['up_kind_code']:
-            print(entry['label'])
+    entries = VisionTb.objects.order_by('kind_code').distinct().values()
+    print(len(entries))
+    with open("breed.tsv","w") as fp:
+        for entry in entries:
+            # import pdb;pdb.set_trace()
+            up_kind_code = filter_label_annotations(ast.literal_eval(entry['label']),entry['kind_code'],fp)
+            if up_kind_code != entry['up_kind_code']:
+                print(up_kind_code,entry['label'])
+                import pdb;pdb.set_trace()
 
 
 
-def filter_label_annotations(label):
+def filter_label_annotations(label,kind_code,fp):
     up_kind_code = -1
-    kind_code = -1
+    kind_name = BreedTb.objects.get(kind_code=kind_code).kind_name
+    temp_list = list()
     for item in label:
         if "dog" in item and up_kind_code == -1:
             up_kind_code = 417000
         elif "cat" in item and up_kind_code == -1:
             up_kind_code = 422400
-    return up_kind_code, kind_code
+        if item not in filter_list:
+            temp_list.append(item)
+    # fp.write("%s\t%s\n" % (kind_name,temp_list))
+    return up_kind_code

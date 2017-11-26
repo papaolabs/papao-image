@@ -100,14 +100,14 @@ def get_search_result_with_time(post_id, start_date, end_date):
     candidate = VisionTb.objects.filter(up_kind_code__exact=query.up_kind_code) \
         .filter(kind_code__exact=query.kind_code) \
         .filter(happen_date__gte=start_date)\
-        .filter(happen_date__lte=end_date)
+        .filter(happen_date__lte=end_date)\
+        .exclude(color_rgb__exact="[]")
     cand_id_url = candidate.values_list("post_id","image_url")
-    # import pdb;pdb.set_trace()
     candidate = candidate.values()
     cand_np = np.asarray(list(map(lambda x: get_hsv_from_rgb(x), candidate)))
     distance = get_hsv_distance(query_np, cand_np)
     # color_ratio = np.asarray(list(map(lambda x:float(x),ast.literal_eval(query.color_fraction))))
-    color_score = np.asarray(list(map(lambda x: float(x), ast.literal_eval(query.color_score))))
+    color_score = np.asarray(list(map(lambda x: float(x), ast.literal_eval(query.color_score)[:5])))
     result_distance = np.sum(distance * (color_score), axis=1).tolist()
     sorted_index = sorted(range(len(result_distance)), key=lambda k: result_distance[k])
     cand_id = list(map(lambda x:x[0],cand_id_url))
@@ -130,15 +130,16 @@ def insert_vision_result(color_results, label_results, post_type, url, post_id=-
 def get_hsv_from_rgb(image):
     if isinstance(image, VisionTb):
         image = model_to_dict(image)
-    color_list = ast.literal_eval(image['color_rgb'])
+    color_list = ast.literal_eval(image['color_rgb'])[:5]
     color_list = [item.split() for item in color_list]
     color_list = [list(map(lambda x: float(x), rgb_values)) for rgb_values in color_list]
     return np.asarray([colorsys.rgb_to_hsv(*rgb_values) for rgb_values in color_list])
 
 
 def get_hsv_distance(query_np, cand_np):
+    # import pdb;pdb.set_trace()
     dh = np.minimum(abs(cand_np[:, :, 0] - query_np[None, :, 0]),
-                    360 - abs(cand_np[:, :, 0] - query_np[None, :, 0])) / 180.0
+                        360 - abs(cand_np[:, :, 0] - query_np[None, :, 0])) / 180.0
     ds = abs(cand_np[:, :, 1] - query_np[None, :, 1])
     dv = abs(cand_np[:, :, 2] - query_np[None, :, 2]) / 255.0
     return np.sqrt(dh * dh + ds * ds + dv * dv)

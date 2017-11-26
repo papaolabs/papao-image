@@ -11,5 +11,6 @@ urlpatterns = [
     url(r'^upload/street$', views.post_image_with_vision, name='upload_with_vision'),
     url(r'^download/(?P<filename>\S+)', views.get_image, name='download'),
     url(r'^delete/(?P<filename>\S+)', views.delete_image, name='delete'),
-    url(r'^search/(?P<post_id>\S+)$',views.search_image,name='search')
+    url(r'^search/(?P<post_id>\S+)$',views.search_image,name='search'),
+    url(r'^search_test/(?P<post_id>\S+)$',views.test_search_image,name='search')
 ]
