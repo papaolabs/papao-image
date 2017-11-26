@@ -8,6 +8,7 @@ import tempfile
 import mimetypes
 import uuid
 from django.forms.models import model_to_dict
+from batch_controller.models import CommentTb, BookmarkTb
 from vision_controller import views as vision_views
 
 bucket_name = 'papao-s3-bucket'
@@ -86,6 +87,8 @@ def search_image(request, post_id):
                 "url": result_url[i]
             }
         ]
+        temp['bookmarkCount'] = BookmarkTb.objects.filter(post_id__exact=item.id).count()
+        temp['commentCount'] = CommentTb.objects.filter(post_id__exact=item.id).count()
         temp_list.append(temp)
     return JsonResponse({'currentPage': 0,
                          "totalElements": 0,
