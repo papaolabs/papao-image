@@ -99,7 +99,7 @@ def get_search_result_with_time(post_id, start_date, end_date):
     # double list comprehension 이용하여 rgb -> hsv 변환 후 distance measure
     candidate = VisionTb.objects.filter(up_kind_code__exact=query.up_kind_code) \
         .filter(kind_code__exact=query.kind_code) \
-        .filter(happen_date__gte=start_date)\
+        .filter(happen_date__gte=query.happen_date)\
         .filter(happen_date__lte=end_date)\
         .exclude(color_rgb__exact="[]")
     cand_id_url = candidate.values_list("post_id","image_url")
