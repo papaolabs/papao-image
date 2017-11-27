@@ -99,3 +99,15 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# intellij
+.idea/
+
+# vscode
+.vscode/
+
+# app key
+*.json
+
+# mysql config
+my.cnf
