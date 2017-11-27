@@ -98,6 +98,14 @@ def search_image(request, post_id):
                          "totalPages": 0,
                          "elements": temp_list})
 
+@csrf_exempt
+def test_search_image(request, post_id):
+    now = datetime.datetime.now()
+    result_post, result_url = vision_views.get_search_result_with_time(post_id=post_id,
+                                                                       start_date=now - datetime.timedelta(weeks=4),
+                                                                       end_date=now)
+    return HttpResponse("\n".join(list(map(lambda x:"<img src=%s width=\"200px\" height=\"200px\">"%x,result_url))))
+
 
 def index(request):
     return HttpResponse("Hello, world!")

@@ -72,3 +72,16 @@ class BookmarkTb(models.Model):
     class Meta:
         managed = False
         db_table = 'bookmark_tb'
+
+class BreedTb(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    created_date = models.DateTimeField(blank=True, null=True)
+    updated_date = models.DateTimeField(blank=True, null=True)
+    kind_code = models.BigIntegerField(unique=True, blank=True, null=True)
+    kind_name = models.CharField(max_length=255, blank=True, null=True)
+    up_kind_code = models.BigIntegerField(blank=True, null=True)
+    up_kind_name = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'breed_tb'
