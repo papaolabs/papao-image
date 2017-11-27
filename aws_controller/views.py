@@ -15,7 +15,7 @@ from vision_controller.models import VisionTb
 bucket_name = 'papao-s3-bucket'
 s3 = boto3.resource('s3')
 bucket = s3.Bucket(bucket_name)
-hostname = "220.230.121.76:8000"
+hostname = "http://220.230.121.76:8000"
 
 
 # hostname = "localhost:8000"
