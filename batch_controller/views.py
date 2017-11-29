@@ -80,11 +80,12 @@ def filter_label_annotations(label,kind_code,fp):
     kind_name = BreedTb.objects.get(kind_code=kind_code).kind_name
     temp_list = list()
     for item in label:
-        if "dog" in item and up_kind_code == -1:
+        if item.find("dog") != -1 and up_kind_code == -1:
             up_kind_code = 417000
-        elif "cat" in item and up_kind_code == -1:
+        elif item.find("cat") != -1  and up_kind_code == -1:
             up_kind_code = 422400
         if item not in filter_list:
             temp_list.append(item)
-    fp.write("%s\t%s\n" % (kind_name,temp_list))
+    if temp_list:
+        fp.write("%s\t%s\t%s\t%s\n" % (kind_name,kind_code,temp_list[0],temp_list))
     return up_kind_code

@@ -16,6 +16,7 @@ from vision_controller.models import VisionTb
 from batch_controller.models import PostTb
 import numpy as np
 import ast
+import csv
 
 try:
     os.environ['GOOGLE_APPLICATION_CREDENTIALS']
@@ -33,6 +34,14 @@ VisionRequest.__new__.__defaults__ = (None, [{'type': vision.enums.Feature.Type.
 ColorResults = collections.namedtuple('ColorResults', ['color', 'score', 'fraction'])
 LabelResults = collections.namedtuple('LabelResults', ['label', 'score'])
 VisionResults = collections.namedtuple('VisionResults', ['label_results', 'color_results'])
+
+def init_kind_code_dict():
+    temp_dict = {}
+    with open('mapping_table.csv','r') as infile:
+        reader = csv.reader(infile)
+        temp_dict = {rows[0]:int(rows[1]) for rows in reader}
+    return temp_dict
+kind_code_dict = init_kind_code_dict()
 
 
 def get_vision_result_by_url(url):
@@ -125,6 +134,19 @@ def insert_vision_result(color_results, label_results, post_type, url, post_id=-
                       color_fraction=color_results.fraction, label=label_results.label,
                       label_score=label_results.score, post_id=post_id)
     entity.save()
+
+def get_kind_type_codes(label_list):
+    up_kind_code = -1
+    kind_code = -1
+    for item in label_list:
+        if up_kind_code == -1:
+            if item.find("dog") != -1:
+                up_kind_code = 417000
+            elif item.find("cat") != -1:
+                up_kind_code = 422400
+        if kind_code == -1:
+            kind_code = kind_code_dict.get(item,-1)
+    return up_kind_code, kind_code
 
 
 def get_hsv_from_rgb(image):
