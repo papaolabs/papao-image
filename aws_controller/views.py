@@ -32,17 +32,14 @@ def post_image_with_vision(request):
     try:
         files = request.FILES.getlist('file')
         post_type = request.POST['post_type']
-        # import pdb;pdb.set_trace()
         response = vision_views.get_vision_result_by_file(files[0])
-        # !!FIXIT!! : result filtering 하여 축종과 품종을 추출해야 함.
-        race_type = 417000
-        animal_type = 114
+        up_kind_code, kind_code = vision_views.get_kind_type_codes(response.label_results.label)
         filenames = list(map(lambda x: upload_image(x), files))
         vision_views.insert_vision_result(color_results=response.color_results, label_results=response.label_results,
                                           post_type=post_type, url=hostname + "/v1/download/" + filenames[0])
         return JsonResponse(
             {'status': 'OK', 'image_url': list(map(lambda x: hostname + "/v1/download/" + x, filenames)),
-             'kind_code': race_type, 'up_kind_code': animal_type})
+             'kind_code': kind_code, 'up_kind_code': up_kind_code})
     except Exception as e:
         return JsonResponse({'status': 'Failure', "message": str(e)})
 
@@ -79,8 +76,6 @@ def search_image(request, post_id):
     result_post, result_url = vision_views.get_search_result_with_time(post_id=post_id,
                                                                        start_date=now - datetime.timedelta(weeks=4),
                                                                        end_date=now)
-    print(time.time() - ts)
-    # import pdb;pdb.set_trace()
     temp_list = list()
     for i, item in enumerate(result_post):
         temp = encode_post_to_result(item)
