@@ -51,12 +51,13 @@ def feature_extraction_batch_job_on_system():
             print("[SYSTEM] %d entries complete" % (i * 10))
         results = vision_views.get_batch_vision_result(item)
         for j, result in enumerate(results):
+            index = (i + 1) * j
             vision_views.insert_vision_result(color_results=result[0].color_results,
-                                                             label_results=result[0].label_results,
-                                                             post_type="SYSTEM", url=result[1], post_id=result[2],
-                                                             up_kind_code=post_entries[(i+1) * j][1],
-                                                             kind_code=post_entries[(i+1) * j][2],
-                                                             happen_date=post_entries[(i+1) * j][3])
+                                              label_results=result[0].label_results,
+                                              post_type="SYSTEM", url=result[1], post_id=result[2],
+                                              up_kind_code=post_entries[index][1],
+                                              kind_code=post_entries[index][2],
+                                              happen_date=post_entries[index][3])
     print("feature extraction batch job done.")
     return
 
@@ -66,7 +67,7 @@ def feature_extraction_batch_job_on_etc():
     post_entries = PostTb.objects.filter(happen_date__gte=now - datetime.timedelta(days=batch_target_days)) \
         .exclude(post_type__exact="SYSTEM") \
         .exclude(id__in=VisionTb.objects.exclude(post_type__exact="SYSTEM").values_list("post_id")) \
-        .values_list("id", "up_kind_code", "kind_code", "post_type")
+        .values_list("id", "up_kind_code", "kind_code", "post_type", "uid", "helper_name", "happen_date")
     post_ids = list(map(lambda x: x[0], post_entries))
     entries = ImageTb.objects.filter(
         post_id__in=post_ids).values_list("url", "post_id")
@@ -76,12 +77,20 @@ def feature_extraction_batch_job_on_etc():
         if i % 10 == 0:
             print("[%s] %d entries complete" % (post_entries[i][3], i * 10))
         results = vision_views.get_batch_vision_result(item)
-        list(map(lambda x: vision_views.insert_vision_result(color_results=x[0].color_results,
-                                                             label_results=x[0].label_results,
-                                                             post_type=post_entries[i][3].upper(), url=x[1],
-                                                             post_id=x[2],
-                                                             up_kind_code=post_entries[i][1],
-                                                             kind_code=post_entries[i][2]), results))
+        for j, result in enumerate(results):
+            index = (i + 1) * j
+            vision_views.insert_vision_result(color_results=result[0].color_results,
+                                              label_results=result[0].label_results,
+                                              post_type=post_entries[index][3].upper(), url=result[1],
+                                              post_id=result[2],
+                                              up_kind_code=post_entries[index][1],
+                                              kind_code=post_entries[index][2])
+            if post_entries[index][3] == "MISSING":
+                find_search_push_candidate_batch_job([{"id": post_entries[index][0],
+                                                       "uid": post_entries[index][4],
+                                                       "helper_name": post_entries[index][5],
+                                                       "happen_date": post_entries[index][6]}])
+
     print("feature extraction batch job done.")
     return
 
@@ -97,7 +106,8 @@ def sync_batch_job_to_post_tb_with_vision_tb():
             if len(image_entry):
                 post_entry = PostTb.objects.filter(id__exact=image_entry)
                 kind_code_entry = post_entry.values("id", "up_kind_code", "kind_code")[0]
-                push_entry = post_entry.filter(post_type__exact="MISSING").values("id", "uid", "helper_name")
+                push_entry = post_entry.filter(post_type__exact="MISSING").values("id", "uid", "helper_name",
+                                                                                  "happen_date")
                 item.post_id = kind_code_entry["id"]
                 item.up_kind_code = kind_code_entry['up_kind_code']
                 item.kind_code = kind_code_entry["kind_code"]
@@ -108,8 +118,7 @@ def sync_batch_job_to_post_tb_with_vision_tb():
                 item.delete()
         print("sync batch job done.")
     except Exception as err:
-        print("Sync error %s"%str(err))
-
+        print("Sync error %s" % str(err))
 
 
 def find_search_push_candidate_batch_job(entries=None):
@@ -121,12 +130,13 @@ def find_search_push_candidate_batch_job(entries=None):
     for item in entries:
         try:
             result_posts, return_urls = vision_views.get_search_result_with_time(post_id=item['id'],
-                                                                                                                                                                          start_date=item['happen_date'],
-                                                                                                                                                                          end_date=now
-                                                                                                                                                                          )
+                                                                                 start_date=item['happen_date'],
+                                                                                 end_date=now
+                                                                                 )
             if len(result_posts) > 1:
                 send_push_message(post_id=item['id'], uid=item['uid'], user_name=item['helper_name'])
         except Exception as err:
+            # import pdb;pdb.set_trace()
             print("Push Error : %s" % str(err))
             continue
 
@@ -157,7 +167,7 @@ def test(request):
     # get_kind_codes_from_vision_table()
 
     # sync_batch_job_to_post_tb_with_vision_tb()
-    # find_search_push_candidate_batch_job()
+    find_search_push_candidate_batch_job()
     return
 
 
@@ -189,12 +199,17 @@ def filter_label_annotations(label, kind_code, fp):
     return up_kind_code
 
 
+def feature_extraction():
+    sync_batch_job_to_post_tb_with_vision_tb()
+    feature_extraction_batch_job_on_system()
+    feature_extraction_batch_job_on_etc()
+    return
+
+
 def batch_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(sync_batch_job_to_post_tb_with_vision_tb, 'interval', minutes=10)
-    scheduler.add_job(feature_extraction_batch_job_on_system, 'interval', minutes=10)
-    # scheduler.add_job(feature_extraction_batch_job_on_etc,'interval', minutes=10)
-    scheduler.add_job(find_search_push_candidate_batch_job, 'cron', hour="13")
+    scheduler.add_job(feature_extraction, 'interval', minutes=10)
+    scheduler.add_job(find_search_push_candidate_batch_job, 'cron', hour=14)
     scheduler.start()
     print("Batch start")
 
