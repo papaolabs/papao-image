@@ -87,24 +87,29 @@ def feature_extraction_batch_job_on_etc():
 
 
 def sync_batch_job_to_post_tb_with_vision_tb():
-    now = datetime.datetime.now()
-    entries = VisionTb.objects.exclude(post_type__exact="SYSTEM").filter(post_id__exact=-1)
-    for item in entries:
-        url = item.image_url
-        image_entry = ImageTb.objects.filter(url__exact=url).values_list("post_id", flat=True)
-        if len(image_entry):
-            post_entry = PostTb.objects.filter(id__exact=image_entry)
-            kind_code_entry = post_entry.values("id", "up_kind_code", "kind_code")[0]
-            push_entry = post_entry.filter(post_type__exact="MISSING").values("id", "uid", "helper_name")
-            item.post_id = kind_code_entry["id"]
-            item.up_kind_code = kind_code_entry['up_kind_code']
-            item.kind_code = kind_code_entry["kind_code"]
-            item.modified_date = now
-            item.save()
-            find_search_push_candidate_batch_job(push_entry)
-        else:
-            item.delete()
-    print("sync batch job done.")
+    try:
+        now = datetime.datetime.now()
+        entries = VisionTb.objects.exclude(post_type__exact="SYSTEM").filter(post_id__exact=-1)
+
+        for item in entries:
+            url = item.image_url
+            image_entry = ImageTb.objects.filter(url__exact=url).values_list("post_id", flat=True)
+            if len(image_entry):
+                post_entry = PostTb.objects.filter(id__exact=image_entry)
+                kind_code_entry = post_entry.values("id", "up_kind_code", "kind_code")[0]
+                push_entry = post_entry.filter(post_type__exact="MISSING").values("id", "uid", "helper_name")
+                item.post_id = kind_code_entry["id"]
+                item.up_kind_code = kind_code_entry['up_kind_code']
+                item.kind_code = kind_code_entry["kind_code"]
+                item.modified_date = now
+                item.save()
+                find_search_push_candidate_batch_job(push_entry)
+            else:
+                item.delete()
+        print("sync batch job done.")
+    except Exception as err:
+        print("Sync error %s"%str(err))
+
 
 
 def find_search_push_candidate_batch_job(entries=None):
@@ -114,12 +119,16 @@ def find_search_push_candidate_batch_job(entries=None):
             .values("id", "uid", "helper_name", "happen_date")
         # .fliter(happen_date__gte=now-)
     for item in entries:
-        result_posts, return_urls = vision_views.get_search_result_with_time(post_id=item['id'],
-                                                                             start_date=item['happen_date'],
-                                                                             end_date=now
-                                                                             )
-        if len(result_posts) > 1:
-            send_push_message(post_id=item['id'], uid=item['uid'], user_name=item['helper_name'])
+        try:
+            result_posts, return_urls = vision_views.get_search_result_with_time(post_id=item['id'],
+                                                                                                                                                                          start_date=item['happen_date'],
+                                                                                                                                                                          end_date=now
+                                                                                                                                                                          )
+            if len(result_posts) > 1:
+                send_push_message(post_id=item['id'], uid=item['uid'], user_name=item['helper_name'])
+        except Exception as err:
+            print("Push Error : %s" % str(err))
+            continue
 
     print("push batch job done.")
     return
@@ -148,7 +157,8 @@ def test(request):
     # get_kind_codes_from_vision_table()
 
     # sync_batch_job_to_post_tb_with_vision_tb()
-    find_search_push_candidate_batch_job()
+    # find_search_push_candidate_batch_job()
+    return
 
 
 def get_kind_codes_from_vision_table():
