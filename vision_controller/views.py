@@ -101,7 +101,6 @@ def get_label_annotation_results(res):
 
 
 def get_search_result_with_time(post_id, start_date, end_date):
-    import pdb;pdb.set_trace()
     query = VisionTb.objects.get(post_id__exact=post_id)
     query_np = get_hsv_from_rgb(query)
     # double list comprehension 이용하여 rgb -> hsv 변환 후 distance measure
