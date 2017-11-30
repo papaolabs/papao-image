@@ -5,6 +5,6 @@ from . import views
 schema_view = get_swagger_view(title='Batch API')
 
 urlpatterns = [
-    # url(r'^$', views.test, name='test'),
+    url(r'^$', views.test, name='test'),
     url(r'^swagger-ui$',schema_view),
 ]
