@@ -128,13 +128,12 @@ def find_search_push_candidate_batch_job(entries=None):
 def send_push_message(post_id, uid, user_name):
     try:
         header = {'Content-Type': 'application/json'}
-        r = requests.post(push_url + "?postID=" + str(post_id), headers=header,
-                          data={
+        r = requests.post(push_url + "?postId=" + str(post_id), headers=header,
+                          json={
                               "message": "%s님의 실종동물과 유사한 동물이 등록되었습니다" % user_name,
                               "type": "SEARCH",
                               "userId": str(uid)
                           })
-        print(r.json())
     except Exception as err:
         print("ERROR : 푸시 발송 실패 %s" % str(err))
 
@@ -142,14 +141,14 @@ def send_push_message(post_id, uid, user_name):
 def test(request):
     # import pdb;
     # pdb.set_trace()
-    feature_extraction_batch_job_on_system()
+    # feature_extraction_batch_job_on_system()
     # feature_extraction_batch_job_on_etc()
     now = datetime.datetime.now()
     # vision_views.get_search_result_with_time(120,now-datetime.timedelta(weeks=2),now)
     # get_kind_codes_from_vision_table()
 
     # sync_batch_job_to_post_tb_with_vision_tb()
-    # find_search_push_candidate_batch_job()
+    find_search_push_candidate_batch_job()
 
 
 def get_kind_codes_from_vision_table():
