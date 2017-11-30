@@ -208,7 +208,7 @@ def feature_extraction():
 
 def batch_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(feature_extraction, 'interval', minutes=1)
+    scheduler.add_job(feature_extraction, 'interval', minutes=10)
     scheduler.add_job(find_search_push_candidate_batch_job, 'cron', hour=14)
     scheduler.start()
     print("Batch start")
