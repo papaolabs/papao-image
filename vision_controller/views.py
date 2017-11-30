@@ -2,7 +2,7 @@ import collections
 import os
 from functools import reduce
 from operator import itemgetter
-
+import datetime
 import time
 from django.shortcuts import render
 from django.forms.models import model_to_dict
@@ -101,6 +101,7 @@ def get_label_annotation_results(res):
 
 
 def get_search_result_with_time(post_id, start_date, end_date):
+    import pdb;pdb.set_trace()
     query = VisionTb.objects.get(post_id__exact=post_id)
     query_np = get_hsv_from_rgb(query)
     # double list comprehension 이용하여 rgb -> hsv 변환 후 distance measure
@@ -108,6 +109,7 @@ def get_search_result_with_time(post_id, start_date, end_date):
         .filter(kind_code__exact=query.kind_code) \
         .filter(happen_date__gte=query.happen_date)\
         .filter(happen_date__lte=end_date)\
+        .exclude(post_type__exact="MISSING")\
         .exclude(color_rgb__exact="[]")
     cand_id_url = candidate.values_list("post_id","image_url")
     candidate = candidate.values()
@@ -126,11 +128,12 @@ def get_search_result_with_time(post_id, start_date, end_date):
     return sorted_post,sorted_url
 
 
-def insert_vision_result(color_results, label_results, post_type, url, post_id=-1, up_kind_code=-1, kind_code=-1):
+def insert_vision_result(color_results, label_results, post_type, url, post_id=-1, up_kind_code=-1, kind_code=-1,happen_date=datetime.datetime.now()):
     entity = VisionTb(post_type=post_type, image_url=url,
                       color_rgb=color_results.color, color_score=color_results.score,
                       color_fraction=color_results.fraction, label=label_results.label,
-                      label_score=label_results.score, post_id=post_id,up_kind_code=up_kind_code,kind_code=kind_code)
+                      label_score=label_results.score, post_id=post_id,
+                      up_kind_code=up_kind_code, kind_code=kind_code, happen_date=happen_date)
     entity.save()
 
 def get_kind_type_codes(label_list):
