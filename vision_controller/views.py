@@ -68,9 +68,7 @@ def get_batch_vision_result(entries):
     response = client.batch_annotate_images(vision_requests)
     results = list(map(lambda x: encode_vision_results(x), response.responses))
     results = list(zip(results, urls, post_ids))
-    list(map(lambda x: insert_vision_result(color_results=x[0].color_results,
-                                            label_results=x[0].label_results,
-                                            post_type="SYSTEM", url=x[1], post_id=x[2]), results))
+    return results
 
 
 def encode_vision_results(res):
@@ -128,11 +126,11 @@ def get_search_result_with_time(post_id, start_date, end_date):
     return sorted_post,sorted_url
 
 
-def insert_vision_result(color_results, label_results, post_type, url, post_id=-1):
+def insert_vision_result(color_results, label_results, post_type, url, post_id=-1, up_kind_code=-1, kind_code=-1):
     entity = VisionTb(post_type=post_type, image_url=url,
                       color_rgb=color_results.color, color_score=color_results.score,
                       color_fraction=color_results.fraction, label=label_results.label,
-                      label_score=label_results.score, post_id=post_id)
+                      label_score=label_results.score, post_id=post_id,up_kind_code=up_kind_code,kind_code=kind_code)
     entity.save()
 
 def get_kind_type_codes(label_list):

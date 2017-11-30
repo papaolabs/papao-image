@@ -28,7 +28,7 @@ def get_image(request, filename):
 
 
 @csrf_exempt
-def post_image_with_vision(request):
+def post_image(request):
     try:
         files = request.FILES.getlist('file')
         post_type = request.POST['post_type']
@@ -36,7 +36,7 @@ def post_image_with_vision(request):
         up_kind_code, kind_code = vision_views.get_kind_type_codes(response.label_results.label)
         filenames = list(map(lambda x: upload_image(x), files))
         vision_views.insert_vision_result(color_results=response.color_results, label_results=response.label_results,
-                                          post_type=post_type, url=hostname + "/v1/download/" + filenames[0])
+                                          post_type=post_type.upper(), url=hostname + "/v1/download/" + filenames[0])
         return JsonResponse(
             {'status': 'OK', 'image_url': list(map(lambda x: hostname + "/v1/download/" + x, filenames)),
              'kind_code': kind_code, 'up_kind_code': up_kind_code})
@@ -44,15 +44,15 @@ def post_image_with_vision(request):
         return JsonResponse({'status': 'Failure', "message": str(e)})
 
 
-@csrf_exempt
-def post_image(request):
-    try:
-        files = request.FILES.getlist('file')
-        filenames = list(map(lambda x: upload_image(x), files))
-        return JsonResponse(
-            {'status': 'OK', 'image_url': list(map(lambda x: hostname + "/v1/download/" + x, filenames))})
-    except Exception as e:
-        return JsonResponse({'status': 'Failure', "message": str(e)})
+# @csrf_exempt
+# def post_image(request):
+#     try:
+#         files = request.FILES.getlist('file')
+#         filenames = list(map(lambda x: upload_image(x), files))
+#         return JsonResponse(
+#             {'status': 'OK', 'image_url': list(map(lambda x: hostname + "/v1/download/" + x, filenames))})
+#     except Exception as e:
+#         return JsonResponse({'status': 'Failure', "message": str(e)})
 
 
 def delete_image(request, filename):
@@ -71,27 +71,38 @@ def delete_image(request, filename):
 
 @csrf_exempt
 def search_image(request, post_id):
-    now = datetime.datetime.now()
-    ts = time.time()
-    result_post, result_url = vision_views.get_search_result_with_time(post_id=post_id,
-                                                                       start_date=now - datetime.timedelta(weeks=4),
-                                                                       end_date=now)
-    temp_list = list()
-    for i, item in enumerate(result_post):
-        temp = encode_post_to_result(item)
-        temp['imageUrls'] = [
-            {
-                "key": 0,
-                "url": result_url[i]
-            }
-        ]
-        temp['bookmarkCount'] = BookmarkTb.objects.filter(post_id__exact=item.id).count()
-        temp['commentCount'] = CommentTb.objects.filter(post_id__exact=item.id).count()
-        temp_list.append(temp)
-    return JsonResponse({'currentPage': 0,
-                         "totalElements": 0,
-                         "totalPages": 0,
-                         "elements": temp_list})
+    try:
+        now = datetime.datetime.now()
+        ts = time.time()
+        result_post, result_url = vision_views.get_search_result_with_time(post_id=post_id,
+                                                                           start_date=now - datetime.timedelta(weeks=4),
+                                                                           end_date=now)
+        temp_list = list()
+        for i, item in enumerate(result_post):
+            temp = encode_post_to_result(item)
+            temp['imageUrls'] = [
+                {
+                    "key": 0,
+                    "url": result_url[i]
+                }
+            ]
+            temp['bookmarkCount'] = BookmarkTb.objects.filter(post_id__exact=item.id).count()
+            temp['commentCount'] = CommentTb.objects.filter(post_id__exact=item.id).count()
+            temp_list.append(temp)
+        return JsonResponse({'currentPage': 0,
+                             "totalElements": 0,
+                             "totalPages": 0,
+                             "status":"OK",
+                             "elements": temp_list})
+    except Exception as err:
+        print("Search Error : %s" % str(err))
+        return JsonResponse({'currentPage': 0,
+                             "totalElements": 0,
+                             "totalPages": 0,
+                             "elements": [],
+                             'status':'fail'})
+
+
 
 @csrf_exempt
 def test_search_image(request, post_id):
