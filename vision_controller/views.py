@@ -2,7 +2,7 @@ import collections
 import os
 from functools import reduce
 from operator import itemgetter
-
+import datetime
 import time
 from django.shortcuts import render
 from django.forms.models import model_to_dict
@@ -16,6 +16,7 @@ from vision_controller.models import VisionTb
 from batch_controller.models import PostTb
 import numpy as np
 import ast
+import csv
 
 try:
     os.environ['GOOGLE_APPLICATION_CREDENTIALS']
@@ -33,6 +34,14 @@ VisionRequest.__new__.__defaults__ = (None, [{'type': vision.enums.Feature.Type.
 ColorResults = collections.namedtuple('ColorResults', ['color', 'score', 'fraction'])
 LabelResults = collections.namedtuple('LabelResults', ['label', 'score'])
 VisionResults = collections.namedtuple('VisionResults', ['label_results', 'color_results'])
+
+def init_kind_code_dict():
+    temp_dict = {}
+    with open('mapping_table.csv','r') as infile:
+        reader = csv.reader(infile)
+        temp_dict = {rows[0]:int(rows[1]) for rows in reader}
+    return temp_dict
+kind_code_dict = init_kind_code_dict()
 
 
 def get_vision_result_by_url(url):
@@ -59,9 +68,7 @@ def get_batch_vision_result(entries):
     response = client.batch_annotate_images(vision_requests)
     results = list(map(lambda x: encode_vision_results(x), response.responses))
     results = list(zip(results, urls, post_ids))
-    list(map(lambda x: insert_vision_result(color_results=x[0].color_results,
-                                            label_results=x[0].label_results,
-                                            post_type="SYSTEM", url=x[1], post_id=x[2]), results))
+    return results
 
 
 def encode_vision_results(res):
@@ -101,6 +108,7 @@ def get_search_result_with_time(post_id, start_date, end_date):
         .filter(kind_code__exact=query.kind_code) \
         .filter(happen_date__gte=query.happen_date)\
         .filter(happen_date__lte=end_date)\
+        .exclude(post_type__exact="MISSING")\
         .exclude(color_rgb__exact="[]")
     cand_id_url = candidate.values_list("post_id","image_url")
     candidate = candidate.values()
@@ -119,12 +127,26 @@ def get_search_result_with_time(post_id, start_date, end_date):
     return sorted_post,sorted_url
 
 
-def insert_vision_result(color_results, label_results, post_type, url, post_id=-1):
+def insert_vision_result(color_results, label_results, post_type, url, post_id=-1, up_kind_code=-1, kind_code=-1,happen_date=datetime.datetime.now()):
     entity = VisionTb(post_type=post_type, image_url=url,
                       color_rgb=color_results.color, color_score=color_results.score,
                       color_fraction=color_results.fraction, label=label_results.label,
-                      label_score=label_results.score, post_id=post_id)
+                      label_score=label_results.score, post_id=post_id,
+                      up_kind_code=up_kind_code, kind_code=kind_code, happen_date=happen_date)
     entity.save()
+
+def get_kind_type_codes(label_list):
+    up_kind_code = -1
+    kind_code = -1
+    for item in label_list:
+        if up_kind_code == -1:
+            if item.find("dog") != -1:
+                up_kind_code = 417000
+            elif item.find("cat") != -1:
+                up_kind_code = 422400
+        if kind_code == -1:
+            kind_code = kind_code_dict.get(item,-1)
+    return up_kind_code, kind_code
 
 
 def get_hsv_from_rgb(image):

@@ -18,7 +18,7 @@ class PostTb(models.Model):
     created_date = models.DateTimeField(blank=True, null=True)
     updated_date = models.DateTimeField(blank=True, null=True)
     age = models.IntegerField(blank=True, null=True)
-    desertion_id = models.CharField(unique=True, max_length=255, blank=True, null=True)
+    desertion_id = models.CharField(max_length=255, blank=True, null=True)
     feature = models.CharField(max_length=255, blank=True, null=True)
     gender_type = models.CharField(max_length=255, blank=True, null=True)
     happen_date = models.DateTimeField(blank=True, null=True)
@@ -35,11 +35,12 @@ class PostTb(models.Model):
     notice_begin_date = models.DateTimeField(blank=True, null=True)
     notice_end_date = models.DateTimeField(blank=True, null=True)
     notice_id = models.CharField(max_length=255, blank=True, null=True)
-    post_type = models.CharField(max_length=255, blank=True, null=True) # SYSTEM, PROTECTING, ROADREPORT, MISSING, UNKNOWN
+    post_type = models.CharField(max_length=255, blank=True, null=True)
     shelter_code = models.BigIntegerField(blank=True, null=True)
     shelter_contact = models.CharField(max_length=255, blank=True, null=True)
     shelter_name = models.CharField(max_length=255, blank=True, null=True)
     state_type = models.CharField(max_length=255, blank=True, null=True)
+    uid = models.CharField(max_length=255, blank=True, null=True)
     up_kind_code = models.BigIntegerField(blank=True, null=True)
     weight = models.FloatField(blank=True, null=True)
 
