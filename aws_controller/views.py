@@ -28,7 +28,7 @@ def get_image(request, filename):
 
 
 @csrf_exempt
-def post_image(request):
+def post_image_from_street(request):
     try:
         files = request.FILES.getlist('file')
         post_type = request.POST['post_type']
@@ -44,15 +44,15 @@ def post_image(request):
         return JsonResponse({'status': 'Failure', "message": str(e)})
 
 
-# @csrf_exempt
-# def post_image(request):
-#     try:
-#         files = request.FILES.getlist('file')
-#         filenames = list(map(lambda x: upload_image(x), files))
-#         return JsonResponse(
-#             {'status': 'OK', 'image_url': list(map(lambda x: hostname + "/v1/download/" + x, filenames))})
-#     except Exception as e:
-#         return JsonResponse({'status': 'Failure', "message": str(e)})
+@csrf_exempt
+def post_image(request):
+    try:
+        files = request.FILES.getlist('file')
+        filenames = list(map(lambda x: upload_image(x), files))
+        return JsonResponse(
+            {'status': 'OK', 'image_url': list(map(lambda x: hostname + "/v1/download/" + x, filenames))})
+    except Exception as e:
+        return JsonResponse({'status': 'Failure', "message": str(e)})
 
 
 def delete_image(request, filename):
