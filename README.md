@@ -12,6 +12,9 @@ papao-image를 사용하기 위해서는 requirements.txt으로 제공되는 라
 ```shell
 $ pip3 install -r requirements.txt
 ```
+#### 외부 연동 설정
+papao-image에서는 이미지 분석에 사용되는 Vision API와 이미지 저장에 사용되는 AWS의 app key, 그리고 데이터베이스 연결에 필요한 설정 파일을 별도로 관리중입니다. 해당 설정은 team papao의 커미터에게 직접 전달받아 사용하실 수 있습니다.
+AWS CLI와 매개변수에 키를 할당하여 연동하여야 합니다. 자세한 사항은 커미터에게 문의하세요.
 
 ## Quick start
 
@@ -19,11 +22,6 @@ papao-image를 실행하기 위해서는 아래 명령어를 쉘에서 입력하
 ```shell
 $ python3 runserver <ip>:<port>
 ```
-
-#### 외부 연동 설정
-papao-image에서는 이미지 분석에 사용되는 Vision API와 이미지 저장에 사용되는 AWS의 app key, 그리고 데이터베이스 연결에 필요한 설정 파일을 별도로 관리중입니다. 해당 설정은 team papao의 커미터에게 직접 전달받아 사용하실 수 있습니다.
-AWS CLI와 매개변수에 키를 할당하여 연동하여야 합니다. 자세한 사항은 커미터에게 문의하세요.
-
 
 ## 컨트리뷰션
 
