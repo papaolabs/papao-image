@@ -4,7 +4,9 @@ import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from django.shortcuts import render
-
+import django.db
+import logging
+logger = logging.getLogger(__name__)
 from batch_controller.models import ImageTb, PostTb, BreedTb
 from vision_controller.models import VisionTb
 from vision_controller import views as vision_views
@@ -58,7 +60,7 @@ def feature_extraction_batch_job_on_system():
                                               up_kind_code=post_entries[index][1],
                                               kind_code=post_entries[index][2],
                                               happen_date=post_entries[index][3])
-    print("feature extraction batch job done.")
+    logger.info("feature extraction batch job done.")
     return
 
 
@@ -75,7 +77,7 @@ def feature_extraction_batch_job_on_etc():
     sliced_list = [entry_list[i:i + batch_size] for i in range(0, len(entry_list), batch_size)]
     for i, item in enumerate(sliced_list):
         if i % 10 == 0:
-            print("[%s] %d entries complete" % (post_entries[i][3], i * 10))
+            logger.info("[%s] %d entries complete" % (post_entries[i][3], i * 10))
         results = vision_views.get_batch_vision_result(item)
         for j, result in enumerate(results):
             index = (i + 1) * j
@@ -91,7 +93,7 @@ def feature_extraction_batch_job_on_etc():
                                                        "helper_name": post_entries[index][5],
                                                        "happen_date": post_entries[index][6]}])
 
-    print("feature extraction batch job done.")
+    logger.info("feature extraction batch job done.")
     return
 
 
@@ -105,26 +107,28 @@ def sync_batch_job_to_post_tb_with_vision_tb():
             image_entry = ImageTb.objects.filter(url__exact=url).values_list("post_id", flat=True)
             if len(image_entry):
                 post_entry = PostTb.objects.filter(id__exact=image_entry)
-                kind_code_entry = post_entry.values("id", "up_kind_code", "kind_code")[0]
+                kind_code_entry = post_entry.values("id", "up_kind_code", "kind_code","happen_date")[0]
                 push_entry = post_entry.filter(post_type__exact="MISSING").values("id", "uid", "helper_name",
                                                                                   "happen_date")
                 item.post_id = kind_code_entry["id"]
                 item.up_kind_code = kind_code_entry['up_kind_code']
                 item.kind_code = kind_code_entry["kind_code"]
+                item.happen_date = kind_code_entry['happen_date']
                 item.modified_date = now
                 item.save()
                 find_search_push_candidate_batch_job(push_entry)
             else:
                 item.delete()
-        print("sync batch job done.")
+        logger.info("sync batch job done.")
     except Exception as err:
-        print("Sync error %s" % str(err))
+        logger.error("Sync error %s" % str(err))
 
 
 def find_search_push_candidate_batch_job(entries=None):
     now = datetime.datetime.now()
+    django.db.close_old_connections()
     if entries == None:
-        entries = PostTb.objects.filter(post_type__exact="MISSING") \
+        entries = PostTb.objects.filter(post_type__exact="MISSING").filter(state_type__exact="PROCESS").filter(is_display__exact=1) \
             .values("id", "uid", "helper_name", "happen_date")
         # .fliter(happen_date__gte=now-)
     for item in entries:
@@ -137,10 +141,10 @@ def find_search_push_candidate_batch_job(entries=None):
                 send_push_message(post_id=item['id'], uid=item['uid'], user_name=item['helper_name'])
         except Exception as err:
             # import pdb;pdb.set_trace()
-            print("Push Error : %s" % str(err))
+            logger.error("Push Error : %s" % str(err))
             continue
 
-    print("push batch job done.")
+    logger.info("push batch job done.")
     return
 
 
@@ -154,7 +158,7 @@ def send_push_message(post_id, uid, user_name):
                               "userId": str(uid)
                           })
     except Exception as err:
-        print("ERROR : 푸시 발송 실패 %s" % str(err))
+        logger.error("ERROR : 푸시 발송 실패 %s" % str(err))
 
 
 def test(request):
@@ -200,6 +204,7 @@ def filter_label_annotations(label, kind_code, fp):
 
 
 def feature_extraction():
+    django.db.close_old_connections()
     sync_batch_job_to_post_tb_with_vision_tb()
     feature_extraction_batch_job_on_system()
     feature_extraction_batch_job_on_etc()
@@ -208,10 +213,10 @@ def feature_extraction():
 
 def batch_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(feature_extraction, 'interval', minutes=10)
+    scheduler.add_job(feature_extraction, 'interval', minutes=5)
     scheduler.add_job(find_search_push_candidate_batch_job, 'cron', hour=14)
     scheduler.start()
-    print("Batch start")
+    logger.info("Batch start")
 
 
 batch_scheduler()

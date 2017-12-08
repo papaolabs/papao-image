@@ -95,7 +95,7 @@ def search_image(request, post_id):
                              "status":"OK",
                              "elements": temp_list})
     except Exception as err:
-        print("Search Error : %s" % str(err))
+        logging.info("Search Error : %s" % str(err))
         return JsonResponse({'currentPage': 0,
                              "totalElements": 0,
                              "totalPages": 0,

@@ -18,7 +18,7 @@ class VisionTb(models.Model):
     up_kind_code = models.BigIntegerField(default=-1)
     kind_code = models.BigIntegerField(default=-1)
     post_id = models.BigIntegerField(default=-1)
-    happen_date = models.DateTimeField(blank=True, default=datetime.now)
+    happen_date = models.DateTimeField(blank=True, default=datetime.now().date())
     created_date = models.DateTimeField(auto_now_add=True, blank=True)
     modified_date = models.DateTimeField(auto_now_add=True, blank=True)
 
